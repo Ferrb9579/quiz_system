@@ -2,6 +2,9 @@ Command Line:
 javac -cp ".;postgresql-42.7.4.jar" *.java
 java -cp ".;postgresql-42.7.4.jar" Main   
 
+Download:
+PostgreSQL
+PostgreSQL driver for jdbc
 
 Database:
 Create database called quizapp
