@@ -3,6 +3,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 // Main Class
 public class Main {
@@ -14,7 +15,7 @@ public class Main {
     }
 }
 
-// Person Class
+// Person Class (Abstract Class)
 abstract class Person {
     protected String name;
     protected String username;
@@ -29,7 +30,7 @@ abstract class Person {
     }
 }
 
-// User Class
+// User Class (Inheritance)
 class User extends Person {
     protected int userId;
 
@@ -37,8 +38,6 @@ class User extends Person {
         super(name, username, password, role);
         this.userId = userId;
     }
-
-    // Getters and Setters (if needed)
 }
 
 // User-defined Exceptions
@@ -66,7 +65,7 @@ class SessionExpiredException extends Exception {
     }
 }
 
-// DatabaseManager Class
+// DatabaseManager Class (Implements AutoCloseable)
 class DatabaseManager implements AutoCloseable {
     private static final String URL = "jdbc:postgresql://localhost:5432/quizapp";
     private static final String USER = "postgres";
@@ -216,29 +215,67 @@ class LoginGUI extends JFrame {
     public LoginGUI() {
         super("Login");
         databaseManager = new DatabaseManager();
-        setSize(300, 200);
-        setLayout(new GridLayout(3, 2));
 
-        usernameField = new JTextField();
-        passwordField = new JPasswordField();
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
 
+        // Create components
+        usernameField = new JTextField(15);
+        passwordField = new JPasswordField(15);
         loginButton = new JButton("Login");
         registerButton = new JButton("Register");
 
-        add(new JLabel("Username:"));
-        add(usernameField);
+        // Create input panel
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
 
-        add(new JLabel("Password:"));
-        add(passwordField);
+        // Username Label and Field
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        gbc.insets = new Insets(5, 5, 5, 5);
+        inputPanel.add(new JLabel("Username:"), gbc);
 
-        add(loginButton);
-        add(registerButton);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        inputPanel.add(usernameField, gbc);
 
+        // Password Label and Field
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.EAST;
+        inputPanel.add(new JLabel("Password:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        inputPanel.add(passwordField, gbc);
+
+        // Buttons panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        buttonPanel.add(loginButton);
+        buttonPanel.add(registerButton);
+
+        // Add components to main panel
+        mainPanel.add(inputPanel, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Add main panel to frame
+        setContentPane(mainPanel);
+
+        // Add action listeners
         loginButton.addActionListener(e -> login());
         registerButton.addActionListener(e -> openRegistration());
 
+        // Set default button
+        getRootPane().setDefaultButton(loginButton);
+
+        // Frame settings
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
+        pack(); // Adjust size based on components
+        setLocationRelativeTo(null); // Center on screen
     }
 
     private void login() {
@@ -267,48 +304,107 @@ class RegistrationGUI extends JFrame {
     private JTextField nameField;
     private JTextField usernameField;
     private JPasswordField passwordField;
-    private JComboBox<String> roleBox;
+    private JRadioButton teacherRadioButton;
+    private JRadioButton studentRadioButton;
+    private ButtonGroup roleGroup;
     private JButton registerButton;
     private DatabaseManager databaseManager;
 
     public RegistrationGUI(DatabaseManager databaseManager) {
         super("Register");
         this.databaseManager = databaseManager;
-        setSize(300, 250);
-        setLayout(new GridLayout(5, 2));
 
-        nameField = new JTextField();
-        usernameField = new JTextField();
-        passwordField = new JPasswordField();
-        roleBox = new JComboBox<>(new String[] { "teacher", "student" });
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        // Create components
+        nameField = new JTextField(15);
+        usernameField = new JTextField(15);
+        passwordField = new JPasswordField(15);
+        teacherRadioButton = new JRadioButton("Teacher");
+        studentRadioButton = new JRadioButton("Student");
+        roleGroup = new ButtonGroup();
+        roleGroup.add(teacherRadioButton);
+        roleGroup.add(studentRadioButton);
+        studentRadioButton.setSelected(true);
         registerButton = new JButton("Register");
 
-        add(new JLabel("Name:"));
-        add(nameField);
+        // Create input panel
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
 
-        add(new JLabel("Username:"));
-        add(usernameField);
+        gbc.insets = new Insets(5, 5, 5, 5); // Add spacing between components
 
-        add(new JLabel("Password:"));
-        add(passwordField);
+        // Name Label and Field
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.EAST;
+        inputPanel.add(new JLabel("Name:"), gbc);
 
-        add(new JLabel("Role:"));
-        add(roleBox);
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.WEST;
+        inputPanel.add(nameField, gbc);
 
-        add(new JLabel());
-        add(registerButton);
+        // Username Label and Field
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.EAST;
+        inputPanel.add(new JLabel("Username:"), gbc);
 
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        inputPanel.add(usernameField, gbc);
+
+        // Password Label and Field
+        gbc.gridx = 0;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.EAST;
+        inputPanel.add(new JLabel("Password:"), gbc);
+
+        gbc.gridx = 1;
+        gbc.gridy = 2;
+        gbc.anchor = GridBagConstraints.WEST;
+        inputPanel.add(passwordField, gbc);
+
+        // Role Label and Radio Buttons
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.EAST;
+        inputPanel.add(new JLabel("Role:"), gbc);
+
+        JPanel rolePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        rolePanel.add(teacherRadioButton);
+        rolePanel.add(studentRadioButton);
+
+        gbc.gridx = 1;
+        gbc.gridy = 3;
+        gbc.anchor = GridBagConstraints.WEST;
+        inputPanel.add(rolePanel, gbc);
+
+        // Add components to main panel
+        mainPanel.add(inputPanel, BorderLayout.CENTER);
+        mainPanel.add(registerButton, BorderLayout.SOUTH);
+
+        // Add action listener
         registerButton.addActionListener(e -> register());
 
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        // Add main panel to frame
+        setContentPane(mainPanel);
+
+        // Frame settings
+        pack();
         setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
     private void register() {
         String name = nameField.getText().trim();
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
-        String role = (String) roleBox.getSelectedItem();
+        String role = teacherRadioButton.isSelected() ? "teacher" : "student";
 
         try {
             databaseManager.registerUser(name, username, password, role);
@@ -322,12 +418,14 @@ class RegistrationGUI extends JFrame {
     }
 }
 
-// QuizAppGUI Class
+// QuizAppGUI Class (Implements QuizOperations Interface)
 class QuizAppGUI implements QuizOperations {
     private JFrame mainFrame;
     private JButton createQuizButton;
     private JButton attendQuizButton;
     private JButton viewResponsesButton;
+    private JButton logoutButton;
+    private JButton manageQuizzesButton;
     private DatabaseManager databaseManager;
     private User user;
     private String token;
@@ -338,51 +436,92 @@ class QuizAppGUI implements QuizOperations {
         this.databaseManager = databaseManager;
 
         mainFrame = new JFrame("Quiz Management System");
-        mainFrame.setSize(400, 200);
-        mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        mainFrame.setLayout(new GridLayout(3, 1));
+
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        // Welcome Label
+        JLabel welcomeLabel = new JLabel("Welcome, " + user.name + " (" + user.role + ")", JLabel.CENTER);
+        welcomeLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        mainPanel.add(welcomeLabel, BorderLayout.NORTH);
+
+        // Buttons Panel
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(4, 1, 10, 10)); // Add spacing between buttons
 
         createQuizButton = new JButton("Create Quiz");
         attendQuizButton = new JButton("Attend Quiz");
         viewResponsesButton = new JButton("View Responses");
 
-        mainFrame.add(createQuizButton);
-        mainFrame.add(attendQuizButton);
-        mainFrame.add(viewResponsesButton);
+        buttonPanel.add(createQuizButton);
+        buttonPanel.add(attendQuizButton);
+        buttonPanel.add(viewResponsesButton);
 
         // Adjust buttons based on user role
         if ("teacher".equals(user.role)) {
             createQuizButton.setEnabled(true);
             viewResponsesButton.setEnabled(true);
             attendQuizButton.setEnabled(false);
+            manageQuizzesButton = new JButton("Manage Quizzes");
+            buttonPanel.add(manageQuizzesButton);
+            manageQuizzesButton.addActionListener(e -> manageQuizzes());
         } else if ("student".equals(user.role)) {
             createQuizButton.setEnabled(false);
             viewResponsesButton.setEnabled(false);
             attendQuizButton.setEnabled(true);
         }
 
+        mainPanel.add(buttonPanel, BorderLayout.CENTER);
+
+        // Logout Button
+        logoutButton = new JButton("Logout");
+        mainPanel.add(logoutButton, BorderLayout.SOUTH);
+
+        // Add action listeners
         createQuizButton.addActionListener(e -> createQuiz());
         attendQuizButton.addActionListener(e -> attendQuiz());
         viewResponsesButton.addActionListener(e -> viewResponses());
+        logoutButton.addActionListener(e -> logout());
+
+        // Set up frame
+        mainFrame.setContentPane(mainPanel);
+        mainFrame.setSize(400, 300);
+        mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mainFrame.setLocationRelativeTo(null);
     }
 
     public void display() {
         mainFrame.setVisible(true);
     }
 
+    private void logout() {
+        try {
+            databaseManager.logoutUser(token);
+        } catch (SQLException e) {
+            DatabaseManager.showErrorDialog(mainFrame, "Logout Error", e.getMessage());
+        }
+        mainFrame.dispose();
+        new LoginGUI().setVisible(true);
+    }
+
+    private void manageQuizzes() {
+        new QuizManager(databaseManager, user).setVisible(true);
+    }
+
     @Override
     public void createQuiz() {
-        new QuizCreator(databaseManager, user).display();
+        new QuizCreator(databaseManager, user).setVisible(true);
     }
 
     @Override
     public void attendQuiz() {
-        new QuizAttender(databaseManager, user).display();
+        new QuizAttender(databaseManager, user).setVisible(true);
     }
 
     @Override
     public void viewResponses() {
-        new QuizResponseViewer(databaseManager, user).display();
+        new QuizResponseViewer(databaseManager, user).setVisible(true);
     }
 }
 
@@ -409,35 +548,49 @@ class QuizCreator extends JFrame {
         super("Create Quiz");
         this.databaseManager = databaseManager;
         this.user = user;
-        setSize(600, 600);
-        setLayout(new BorderLayout());
 
-        quizTitleField = new JTextField();
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        // Quiz Title Panel
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.add(new JLabel("Quiz Title:"), BorderLayout.WEST);
+        quizTitleField = new JTextField(30);
+        titlePanel.add(quizTitleField, BorderLayout.CENTER);
+
+        // Questions Panel
         questionsPanel = new JPanel();
         questionsPanel.setLayout(new BoxLayout(questionsPanel, BoxLayout.Y_AXIS));
         JScrollPane scrollPane = new JScrollPane(questionsPanel);
 
+        // Buttons Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
         addQuestionButton = new JButton("Add Question");
         saveButton = new JButton("Save Quiz");
-
-        questionPanels = new ArrayList<>();
-
-        JPanel topPanel = new JPanel(new GridLayout(2, 1));
-        topPanel.add(new JLabel("Quiz Title:"));
-        topPanel.add(quizTitleField);
-
-        JPanel buttonPanel = new JPanel(new FlowLayout());
         buttonPanel.add(addQuestionButton);
         buttonPanel.add(saveButton);
 
-        add(topPanel, BorderLayout.NORTH);
-        add(scrollPane, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
+        // Add components to main panel
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
 
+        // Add action listeners
         addQuestionButton.addActionListener(e -> addQuestionPanel());
         saveButton.addActionListener(e -> saveQuiz());
 
+        // Initialize question panels list
+        questionPanels = new ArrayList<>();
+
+        // Add initial question panel
         addQuestionPanel();
+
+        // Set up frame
+        setContentPane(mainPanel);
+        setSize(700, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
     public void display() {
@@ -445,7 +598,8 @@ class QuizCreator extends JFrame {
     }
 
     private void addQuestionPanel() {
-        QuestionCreatorPanel questionPanel = new QuestionCreatorPanel(this);
+        int questionNumber = questionPanels.size() + 1;
+        QuestionCreatorPanel questionPanel = new QuestionCreatorPanel(this, questionNumber);
         questionPanels.add(questionPanel);
         questionsPanel.add(questionPanel);
         questionsPanel.revalidate();
@@ -455,8 +609,16 @@ class QuizCreator extends JFrame {
     public void removeQuestionPanel(QuestionCreatorPanel questionPanel) {
         questionPanels.remove(questionPanel);
         questionsPanel.remove(questionPanel);
+        updateQuestionNumbers();
         questionsPanel.revalidate();
         questionsPanel.repaint();
+    }
+
+    private void updateQuestionNumbers() {
+        int number = 1;
+        for (QuestionCreatorPanel qPanel : questionPanels) {
+            qPanel.updateQuestionNumber(number++);
+        }
     }
 
     private void saveQuiz() {
@@ -506,43 +668,59 @@ class QuestionCreatorPanel extends JPanel {
     private List<JTextField> optionFields;
     private QuizCreator parent;
 
-    public QuestionCreatorPanel(QuizCreator parent) {
+    public QuestionCreatorPanel(QuizCreator parent, int questionNumber) {
         this.parent = parent;
-        setLayout(new BorderLayout());
-        questionField = new JTextField();
+        setLayout(new BorderLayout(5, 5));
+        setBorder(BorderFactory.createTitledBorder("Question " + questionNumber));
+
+        // Question Text Panel
+        JPanel questionTextPanel = new JPanel(new BorderLayout());
+        questionTextPanel.add(new JLabel("Question:"), BorderLayout.WEST);
+        questionField = new JTextField(30);
+        questionTextPanel.add(questionField, BorderLayout.CENTER);
+
+        // Question Type Panel
+        JPanel questionTypePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        questionTypePanel.add(new JLabel("Type:"));
         questionTypeBox = new JComboBox<>(new String[] { "Short Answer", "True/False", "Multiple Choice" });
+        questionTypePanel.add(questionTypeBox);
+
+        // Options Panel
         optionsPanel = new JPanel();
         optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
+        JScrollPane optionsScrollPane = new JScrollPane(optionsPanel);
+        optionsScrollPane.setPreferredSize(new Dimension(400, 100));
+
+        // Buttons Panel
+        JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
         addOptionButton = new JButton("Add Option");
         removeQuestionButton = new JButton("Remove Question");
+        buttonsPanel.add(addOptionButton);
+        buttonsPanel.add(removeQuestionButton);
+
+        // Add components to main panel
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(questionTextPanel, BorderLayout.NORTH);
+        topPanel.add(questionTypePanel, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
+        add(optionsScrollPane, BorderLayout.CENTER);
+        add(buttonsPanel, BorderLayout.SOUTH);
+
+        // Initialize option fields list
         optionFields = new ArrayList<>();
 
-        JPanel topPanel = new JPanel(new GridLayout(2, 1));
-        topPanel.add(new JLabel("Question:"));
-        topPanel.add(questionField);
-
-        JPanel typePanel = new JPanel(new GridLayout(2, 1));
-        typePanel.add(new JLabel("Question Type:"));
-        typePanel.add(questionTypeBox);
-
-        JPanel headerPanel = new JPanel(new BorderLayout());
-        headerPanel.add(topPanel, BorderLayout.CENTER);
-        headerPanel.add(typePanel, BorderLayout.EAST);
-
-        add(headerPanel, BorderLayout.NORTH);
-        add(optionsPanel, BorderLayout.CENTER);
-
-        JPanel buttonPanel = new JPanel(new FlowLayout());
-        buttonPanel.add(addOptionButton);
-        buttonPanel.add(removeQuestionButton);
-
-        add(buttonPanel, BorderLayout.SOUTH);
-
+        // Add action listeners
         questionTypeBox.addActionListener(e -> updateOptionFields());
         addOptionButton.addActionListener(e -> addOptionField());
         removeQuestionButton.addActionListener(e -> parent.removeQuestionPanel(this));
 
+        // Initialize options
         updateOptionFields();
+    }
+
+    public void updateQuestionNumber(int questionNumber) {
+        setBorder(BorderFactory.createTitledBorder("Question " + questionNumber));
     }
 
     private void updateOptionFields() {
@@ -610,29 +788,46 @@ class QuizAttender extends JFrame {
         super("Attend Quiz");
         this.databaseManager = databaseManager;
         this.user = user;
-        setSize(600, 600);
-        setLayout(new BorderLayout());
 
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        // Quiz Selection Panel
+        JPanel quizSelectPanel = new JPanel(new BorderLayout());
+        quizSelectPanel.add(new JLabel("Select Quiz:"), BorderLayout.WEST);
         quizSelectBox = new JComboBox<>();
+        quizSelectPanel.add(quizSelectBox, BorderLayout.CENTER);
+
+        // Questions Panel
         questionsPanel = new JPanel();
         questionsPanel.setLayout(new BoxLayout(questionsPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(questionsPanel);
+
+        // Submit Button
         submitButton = new JButton("Submit Responses");
-        questionPanels = new ArrayList<>();
 
-        loadQuizzes();
+        // Add components to main panel
+        mainPanel.add(quizSelectPanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(submitButton, BorderLayout.SOUTH);
 
-        JPanel topPanel = new JPanel(new GridLayout(1, 2));
-        topPanel.add(new JLabel("Select Quiz:"));
-        topPanel.add(quizSelectBox);
-
-        add(topPanel, BorderLayout.NORTH);
-        add(new JScrollPane(questionsPanel), BorderLayout.CENTER);
-        add(submitButton, BorderLayout.SOUTH);
-
+        // Add action listeners
         quizSelectBox.addActionListener(e -> loadQuestions());
         submitButton.addActionListener(e -> submitResponses());
 
+        // Initialize question panels list
+        questionPanels = new ArrayList<>();
+
+        // Load quizzes and questions
+        loadQuizzes();
         loadQuestions();
+
+        // Set up frame
+        setContentPane(mainPanel);
+        setSize(700, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
     public void display() {
@@ -641,6 +836,7 @@ class QuizAttender extends JFrame {
 
     private void loadQuizzes() {
         try {
+            quizSelectBox.removeAllItems();
             ResultSet rs = databaseManager.executeQuery("SELECT quiz_id, title FROM quizzes");
             while (rs.next()) {
                 quizSelectBox.addItem(rs.getInt("quiz_id") + ": " + rs.getString("title"));
@@ -660,15 +856,25 @@ class QuizAttender extends JFrame {
         int quizId = Integer.parseInt(selectedQuiz.split(":")[0]);
 
         try {
-            ResultSet rs = databaseManager.executeQuery(
-                    "SELECT question_id, question_text, question_type, options FROM questions WHERE quiz_id = ?",
-                    quizId);
+            // Check if student has already submitted responses
+            ResultSet rsCheck = databaseManager.executeQuery(
+                    "SELECT * FROM responses WHERE user_id = ? AND quiz_id = ?", user.userId, quizId);
+            if (rsCheck.next()) {
+                // Student has already submitted responses
+                questionsPanel.add(new JLabel("You have already attended this quiz."));
+                submitButton.setEnabled(false);
+            } else {
+                submitButton.setEnabled(true);
+                ResultSet rs = databaseManager.executeQuery(
+                        "SELECT question_id, question_text, question_type, options FROM questions WHERE quiz_id = ?",
+                        quizId);
 
-            while (rs.next()) {
-                QuestionAttenderPanel qPanel = new QuestionAttenderPanel(rs.getInt("question_id"),
-                        rs.getString("question_text"), rs.getString("question_type"), rs.getString("options"));
-                questionPanels.add(qPanel);
-                questionsPanel.add(qPanel);
+                while (rs.next()) {
+                    QuestionAttenderPanel qPanel = new QuestionAttenderPanel(rs.getInt("question_id"),
+                            rs.getString("question_text"), rs.getString("question_type"), rs.getString("options"));
+                    questionPanels.add(qPanel);
+                    questionsPanel.add(qPanel);
+                }
             }
 
             questionsPanel.revalidate();
@@ -718,8 +924,10 @@ class QuestionAttenderPanel extends JPanel {
         this.questionType = questionType;
         this.options = options;
 
-        setLayout(new BorderLayout());
-        JLabel questionLabel = new JLabel(questionText);
+        setLayout(new BorderLayout(5, 5));
+        setBorder(BorderFactory.createTitledBorder("Question"));
+
+        JLabel questionLabel = new JLabel("<html><b>" + questionText + "</b></html>");
         add(questionLabel, BorderLayout.NORTH);
 
         switch (questionType) {
@@ -755,8 +963,9 @@ class QuestionAttenderPanel extends JPanel {
 class QuizResponseViewer extends JFrame {
     private JComboBox<String> quizSelectBox;
     private JComboBox<String> studentSelectBox;
-    private JTextArea responseArea;
+    private JTable responseTable;
     private JButton refreshButton;
+    private JButton deleteResponseButton;
     private DatabaseManager databaseManager;
     private User user;
 
@@ -764,33 +973,54 @@ class QuizResponseViewer extends JFrame {
         super("View Responses");
         this.databaseManager = databaseManager;
         this.user = user;
-        setSize(600, 600);
-        setLayout(new BorderLayout());
 
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        // Selection Panel
+        JPanel selectionPanel = new JPanel(new GridLayout(2, 2, 10, 10));
         quizSelectBox = new JComboBox<>();
         studentSelectBox = new JComboBox<>();
-        responseArea = new JTextArea();
-        responseArea.setEditable(false);
+
+        selectionPanel.add(new JLabel("Select Quiz:"));
+        selectionPanel.add(quizSelectBox);
+        selectionPanel.add(new JLabel("Select Student:"));
+        selectionPanel.add(studentSelectBox);
+
+        // Response Table
+        responseTable = new JTable();
+        JScrollPane scrollPane = new JScrollPane(responseTable);
+
+        // Buttons Panel
         refreshButton = new JButton("Refresh");
+        deleteResponseButton = new JButton("Delete Response");
 
-        loadQuizzes();
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        bottomPanel.add(refreshButton);
+        bottomPanel.add(deleteResponseButton);
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        JPanel topPanel = new JPanel(new GridLayout(2, 2));
-        topPanel.add(new JLabel("Select Quiz:"));
-        topPanel.add(quizSelectBox);
-        topPanel.add(new JLabel("Select Student:"));
-        topPanel.add(studentSelectBox);
+        // Add components to main panel
+        mainPanel.add(selectionPanel, BorderLayout.NORTH);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
 
-        add(topPanel, BorderLayout.NORTH);
-        add(new JScrollPane(responseArea), BorderLayout.CENTER);
-        add(refreshButton, BorderLayout.SOUTH);
-
+        // Add action listeners
         quizSelectBox.addActionListener(e -> loadStudents());
         studentSelectBox.addActionListener(e -> loadResponses());
         refreshButton.addActionListener(e -> loadResponses());
+        deleteResponseButton.addActionListener(e -> deleteResponse());
 
+        // Load quizzes and initial data
+        loadQuizzes();
         loadStudents();
         loadResponses();
+
+        // Set up frame
+        setContentPane(mainPanel);
+        setSize(700, 500);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
     public void display() {
@@ -799,6 +1029,7 @@ class QuizResponseViewer extends JFrame {
 
     private void loadQuizzes() {
         try {
+            quizSelectBox.removeAllItems();
             ResultSet rs = databaseManager.executeQuery("SELECT quiz_id, title FROM quizzes");
             while (rs.next()) {
                 quizSelectBox.addItem(rs.getInt("quiz_id") + ": " + rs.getString("title"));
@@ -829,7 +1060,6 @@ class QuizResponseViewer extends JFrame {
     }
 
     private void loadResponses() {
-        responseArea.setText("");
         String selectedQuiz = (String) quizSelectBox.getSelectedItem();
         String selectedStudent = (String) studentSelectBox.getSelectedItem();
         if (selectedQuiz == null || selectedStudent == null)
@@ -848,15 +1078,141 @@ class QuizResponseViewer extends JFrame {
                 ResultSet qs = databaseManager.executeQuery(
                         "SELECT question_text FROM questions WHERE quiz_id = ?", quizId);
 
+                DefaultTableModel model = new DefaultTableModel();
+                model.addColumn("Question");
+                model.addColumn("Answer");
+
                 int i = 0;
                 while (qs.next() && i < answers.length) {
-                    responseArea.append("Question: " + qs.getString("question_text") + "\n");
-                    responseArea.append("Answer: " + answers[i] + "\n\n");
+                    model.addRow(new Object[] { qs.getString("question_text"), answers[i] });
                     i++;
                 }
+
+                responseTable.setModel(model);
+                responseTable.setRowHeight(30);
+
             } else {
-                responseArea.setText("No responses found for selected student.");
+                DefaultTableModel model = new DefaultTableModel();
+                model.addColumn("Message");
+                model.addRow(new Object[] { "No responses found for selected student." });
+                responseTable.setModel(model);
             }
+        } catch (SQLException e) {
+            DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
+        }
+    }
+
+    private void deleteResponse() {
+        String selectedQuiz = (String) quizSelectBox.getSelectedItem();
+        String selectedStudent = (String) studentSelectBox.getSelectedItem();
+        if (selectedQuiz == null || selectedStudent == null) {
+            JOptionPane.showMessageDialog(this, "Please select a quiz and a student.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int quizId = Integer.parseInt(selectedQuiz.split(":")[0]);
+        int userId = Integer.parseInt(selectedStudent.split(":")[0]);
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this student's response? The student will be able to reattend the quiz.", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            databaseManager.executeUpdate("DELETE FROM responses WHERE quiz_id = ? AND user_id = ?", quizId, userId);
+            JOptionPane.showMessageDialog(this, "Response deleted successfully.");
+            loadResponses();
+        } catch (SQLException e) {
+            DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
+        }
+    }
+}
+
+// QuizManager Class
+class QuizManager extends JFrame {
+    private JTable quizTable;
+    private JButton deleteQuizButton;
+    private DatabaseManager databaseManager;
+    private User user;
+
+    public QuizManager(DatabaseManager databaseManager, User user) {
+        super("Manage Quizzes");
+        this.databaseManager = databaseManager;
+        this.user = user;
+
+        // Set up main panel
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+
+        // Quiz Table
+        quizTable = new JTable();
+        JScrollPane scrollPane = new JScrollPane(quizTable);
+
+        // Delete Button
+        deleteQuizButton = new JButton("Delete Selected Quiz");
+
+        // Add components to main panel
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(deleteQuizButton, BorderLayout.SOUTH);
+
+        // Add action listeners
+        deleteQuizButton.addActionListener(e -> deleteSelectedQuiz());
+
+        // Load quizzes
+        loadQuizzes();
+
+        // Set up frame
+        setContentPane(mainPanel);
+        setSize(600, 400);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+    }
+
+    private void loadQuizzes() {
+        try {
+            DefaultTableModel model = new DefaultTableModel();
+            model.addColumn("Quiz ID");
+            model.addColumn("Title");
+
+            ResultSet rs = databaseManager.executeQuery("SELECT quiz_id, title FROM quizzes");
+            while (rs.next()) {
+                model.addRow(new Object[] { rs.getInt("quiz_id"), rs.getString("title") });
+            }
+
+            quizTable.setModel(model);
+            quizTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        } catch (SQLException e) {
+            DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
+        }
+    }
+
+    private void deleteSelectedQuiz() {
+        int selectedRow = quizTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a quiz to delete.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int quizId = (int) quizTable.getValueAt(selectedRow, 0);
+        String quizTitle = (String) quizTable.getValueAt(selectedRow, 1);
+
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete quiz \"" + quizTitle + "\"?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            // Delete from responses
+            databaseManager.executeUpdate("DELETE FROM responses WHERE quiz_id = ?", quizId);
+            // Delete from questions
+            databaseManager.executeUpdate("DELETE FROM questions WHERE quiz_id = ?", quizId);
+            // Delete from quizzes
+            databaseManager.executeUpdate("DELETE FROM quizzes WHERE quiz_id = ?", quizId);
+
+            JOptionPane.showMessageDialog(this, "Quiz deleted successfully.");
+            loadQuizzes();
+
         } catch (SQLException e) {
             DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
         }
