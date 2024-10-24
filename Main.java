@@ -1,6 +1,7 @@
 import java.awt.*;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -40,6 +41,100 @@ class User extends Person {
     }
 }
 
+abstract class Question {
+    protected int questionId;
+    protected int quizId;
+    protected String questionText;
+    protected String questionType;
+    protected String correctAnswer;
+
+    public Question(int questionId, int quizId, String questionText, String questionType, String correctAnswer) {
+        this.questionId = questionId;
+        this.quizId = quizId;
+        this.questionText = questionText;
+        this.questionType = questionType;
+        this.correctAnswer = correctAnswer;
+    }
+
+    public int getQuestionId() {
+        return questionId;
+    }
+
+    public int getQuizId() {
+        return quizId;
+    }
+
+    public String getQuestionText() {
+        return questionText;
+    }
+
+    public String getQuestionType() {
+        return questionType;
+    }
+
+    public String getCorrectAnswer() {
+        return correctAnswer;
+    }
+
+    public abstract double gradeAnswer(String studentAnswer);
+}
+
+// ShortAnswerQuestion Class
+class ShortAnswerQuestion extends Question {
+    public ShortAnswerQuestion(int questionId, int quizId, String questionText, String correctAnswer) {
+        super(questionId, quizId, questionText, "Short Answer", correctAnswer);
+    }
+
+    @Override
+    public double gradeAnswer(String studentAnswer) {
+        if (correctAnswer.equalsIgnoreCase(studentAnswer.trim())) {
+            return 1.0;
+        } else {
+            return 0.0;
+        }
+    }
+}
+
+// TrueFalseQuestion Class
+class TrueFalseQuestion extends Question {
+    public TrueFalseQuestion(int questionId, int quizId, String questionText, String correctAnswer) {
+        super(questionId, quizId, questionText, "True/False", correctAnswer);
+    }
+
+    @Override
+    public double gradeAnswer(String studentAnswer) {
+        if (correctAnswer.equalsIgnoreCase(studentAnswer.trim())) {
+            return 1.0;
+        } else {
+            return 0.0;
+        }
+    }
+}
+
+// MultipleChoiceQuestion Class
+class MultipleChoiceQuestion extends Question {
+    private List<String> options;
+
+    public MultipleChoiceQuestion(int questionId, int quizId, String questionText, List<String> options,
+            String correctAnswer) {
+        super(questionId, quizId, questionText, "Multiple Choice", correctAnswer);
+        this.options = options;
+    }
+
+    public List<String> getOptions() {
+        return options;
+    }
+
+    @Override
+    public double gradeAnswer(String studentAnswer) {
+        if (correctAnswer.equalsIgnoreCase(studentAnswer.trim())) {
+            return 1.0;
+        } else {
+            return 0.0;
+        }
+    }
+}
+
 // User-defined Exceptions
 class UserAlreadyExistsException extends Exception {
     public UserAlreadyExistsException(String message) {
@@ -65,7 +160,6 @@ class SessionExpiredException extends Exception {
     }
 }
 
-// DatabaseManager Class (Implements AutoCloseable)
 class DatabaseManager implements AutoCloseable {
     private static final String URL = "jdbc:postgresql://localhost:5432/quizapp";
     private static final String USER = "postgres";
@@ -78,7 +172,8 @@ class DatabaseManager implements AutoCloseable {
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
             System.out.println("Database connected successfully.");
         } catch (SQLException e) {
-            showErrorDialog(null, "Database Connection Error", e.getMessage());
+            showErrorDialog(null, "Database Connection Error", "Unable to connect to database");
+            System.exit(1);
         }
     }
 
@@ -637,17 +732,26 @@ class QuizCreator extends JFrame {
             int quizId = rs.getInt("quiz_id");
 
             for (QuestionCreatorPanel qPanel : questionPanels) {
-                String questionText = qPanel.getQuestionText().trim();
-                String questionType = qPanel.getQuestionType();
-                String options = String.join("~", qPanel.getOptions());
+                Question question = qPanel.createQuestion(quizId);
 
-                if (questionText.isEmpty()) {
+                if (question == null || question.getQuestionText().isEmpty()) {
                     continue; // Skip empty questions
                 }
 
+                // Insert question into database
+                String questionText = question.getQuestionText();
+                String questionType = question.getQuestionType();
+                String options = null;
+                if (question instanceof MultipleChoiceQuestion) {
+                    options = String.join("~", ((MultipleChoiceQuestion) question).getOptions());
+                } else if (question instanceof TrueFalseQuestion) {
+                    options = "True~False";
+                }
+                String correctAnswer = question.getCorrectAnswer();
+
                 databaseManager.executeUpdate(
-                        "INSERT INTO questions (quiz_id, question_text, question_type, options) VALUES (?, ?, ?, ?)",
-                        quizId, questionText, questionType, options);
+                        "INSERT INTO questions (quiz_id, question_text, question_type, options, correct_answer) VALUES (?, ?, ?, ?, ?)",
+                        quizId, questionText, questionType, options, correctAnswer);
             }
 
             JOptionPane.showMessageDialog(this, "Quiz saved successfully.");
@@ -656,6 +760,7 @@ class QuizCreator extends JFrame {
             DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
         }
     }
+
 }
 
 // QuestionCreatorPanel Class
@@ -666,6 +771,7 @@ class QuestionCreatorPanel extends JPanel {
     private JButton addOptionButton;
     private JButton removeQuestionButton;
     private List<JTextField> optionFields;
+    private JTextField correctAnswerField;
     private QuizCreator parent;
 
     public QuestionCreatorPanel(QuizCreator parent, int questionNumber) {
@@ -685,6 +791,12 @@ class QuestionCreatorPanel extends JPanel {
         questionTypeBox = new JComboBox<>(new String[] { "Short Answer", "True/False", "Multiple Choice" });
         questionTypePanel.add(questionTypeBox);
 
+        // Correct Answer Panel
+        JPanel correctAnswerPanel = new JPanel(new BorderLayout());
+        correctAnswerPanel.add(new JLabel("Correct Answer:"), BorderLayout.WEST);
+        correctAnswerField = new JTextField(30);
+        correctAnswerPanel.add(correctAnswerField, BorderLayout.CENTER);
+
         // Options Panel
         optionsPanel = new JPanel();
         optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
@@ -702,6 +814,7 @@ class QuestionCreatorPanel extends JPanel {
         JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.add(questionTextPanel, BorderLayout.NORTH);
         topPanel.add(questionTypePanel, BorderLayout.CENTER);
+        topPanel.add(correctAnswerPanel, BorderLayout.SOUTH);
 
         add(topPanel, BorderLayout.NORTH);
         add(optionsScrollPane, BorderLayout.CENTER);
@@ -733,6 +846,7 @@ class QuestionCreatorPanel extends JPanel {
             addOptionField();
         } else if ("True/False".equals(selectedType)) {
             addOptionButton.setEnabled(false);
+            correctAnswerField.setText("True");
             JTextField trueOption = new JTextField("True");
             trueOption.setEditable(false);
             optionFields.add(trueOption);
@@ -772,6 +886,32 @@ class QuestionCreatorPanel extends JPanel {
             options.add(field.getText());
         }
         return options;
+    }
+
+    public String getCorrectAnswer() {
+        return correctAnswerField.getText().trim();
+    }
+
+    public Question createQuestion(int quizId) {
+        String questionText = getQuestionText().trim();
+        String questionType = getQuestionType();
+        String correctAnswer = getCorrectAnswer();
+
+        if (questionText.isEmpty()) {
+            return null; // Skip empty questions
+        }
+
+        switch (questionType) {
+            case "Short Answer":
+                return new ShortAnswerQuestion(0, quizId, questionText, correctAnswer);
+            case "True/False":
+                return new TrueFalseQuestion(0, quizId, questionText, correctAnswer);
+            case "Multiple Choice":
+                List<String> options = getOptions();
+                return new MultipleChoiceQuestion(0, quizId, questionText, options, correctAnswer);
+            default:
+                return null;
+        }
     }
 }
 
@@ -866,12 +1006,34 @@ class QuizAttender extends JFrame {
             } else {
                 submitButton.setEnabled(true);
                 ResultSet rs = databaseManager.executeQuery(
-                        "SELECT question_id, question_text, question_type, options FROM questions WHERE quiz_id = ?",
+                        "SELECT question_id, question_text, question_type, options, correct_answer FROM questions WHERE quiz_id = ?",
                         quizId);
 
                 while (rs.next()) {
-                    QuestionAttenderPanel qPanel = new QuestionAttenderPanel(rs.getInt("question_id"),
-                            rs.getString("question_text"), rs.getString("question_type"), rs.getString("options"));
+                    int questionId = rs.getInt("question_id");
+                    String questionText = rs.getString("question_text");
+                    String questionType = rs.getString("question_type");
+                    String optionsStr = rs.getString("options");
+                    String correctAnswer = rs.getString("correct_answer");
+
+                    Question question;
+                    switch (questionType) {
+                        case "Short Answer":
+                            question = new ShortAnswerQuestion(questionId, quizId, questionText, correctAnswer);
+                            break;
+                        case "True/False":
+                            question = new TrueFalseQuestion(questionId, quizId, questionText, correctAnswer);
+                            break;
+                        case "Multiple Choice":
+                            List<String> options = Arrays.asList(optionsStr.split("~"));
+                            question = new MultipleChoiceQuestion(questionId, quizId, questionText, options,
+                                    correctAnswer);
+                            break;
+                        default:
+                            continue;
+                    }
+
+                    QuestionAttenderPanel qPanel = new QuestionAttenderPanel(question);
                     questionPanels.add(qPanel);
                     questionsPanel.add(qPanel);
                 }
@@ -893,21 +1055,33 @@ class QuizAttender extends JFrame {
         }
 
         int quizId = Integer.parseInt(selectedQuiz.split(":")[0]);
-        List<String> answers = new ArrayList<>();
-
-        for (QuestionAttenderPanel qPanel : questionPanels) {
-            answers.add(qPanel.getAnswer());
-        }
+        double totalScore = 0.0;
 
         try {
-            databaseManager.executeUpdate("INSERT INTO responses (user_id, quiz_id, answers) VALUES (?, ?, ?)",
-                    user.userId, quizId, String.join("~", answers));
-            JOptionPane.showMessageDialog(this, "Responses submitted successfully.");
+            for (QuestionAttenderPanel qPanel : questionPanels) {
+                String studentAnswer = qPanel.getAnswer();
+                Question question = qPanel.getQuestion();
+
+                double score = question.gradeAnswer(studentAnswer);
+                totalScore += score;
+
+                // Insert into student_answers table
+                databaseManager.executeUpdate(
+                        "INSERT INTO student_answers (user_id, quiz_id, question_id, student_answer, score) VALUES (?, ?, ?, ?, ?)",
+                        user.userId, quizId, question.getQuestionId(), studentAnswer, score);
+            }
+
+            // Insert into responses table
+            databaseManager.executeUpdate("INSERT INTO responses (user_id, quiz_id, total_score) VALUES (?, ?, ?)",
+                    user.userId, quizId, totalScore);
+
+            JOptionPane.showMessageDialog(this, "Responses submitted successfully. Your score: " + totalScore);
             dispose();
         } catch (SQLException e) {
             DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
         }
     }
+
 }
 
 // QuestionAttenderPanel Class
@@ -917,12 +1091,13 @@ class QuestionAttenderPanel extends JPanel {
     private String questionType;
     private String options;
     private JComponent answerComponent;
+    private Question question;
 
-    public QuestionAttenderPanel(int questionId, String questionText, String questionType, String options) {
-        this.questionId = questionId;
-        this.questionText = questionText;
-        this.questionType = questionType;
-        this.options = options;
+    public QuestionAttenderPanel(Question question) {
+        this.question = question;
+        this.questionId = question.getQuestionId();
+        this.questionText = question.getQuestionText();
+        this.questionType = question.getQuestionType();
 
         setLayout(new BorderLayout(5, 5));
         setBorder(BorderFactory.createTitledBorder("Question"));
@@ -938,8 +1113,9 @@ class QuestionAttenderPanel extends JPanel {
                 answerComponent = new JComboBox<>(new String[] { "True", "False" });
                 break;
             case "Multiple Choice":
-                String[] optionArray = options.split("~");
-                answerComponent = new JComboBox<>(optionArray);
+                MultipleChoiceQuestion mcQuestion = (MultipleChoiceQuestion) question;
+                List<String> options = mcQuestion.getOptions();
+                answerComponent = new JComboBox<>(options.toArray(new String[0]));
                 break;
             default:
                 answerComponent = new JTextField();
@@ -956,6 +1132,10 @@ class QuestionAttenderPanel extends JPanel {
             return (String) ((JComboBox<?>) answerComponent).getSelectedItem();
         }
         return "";
+    }
+
+    public Question getQuestion() {
+        return question;
     }
 }
 
@@ -1059,6 +1239,8 @@ class QuizResponseViewer extends JFrame {
         }
     }
 
+    // In QuizResponseViewer class
+
     private void loadResponses() {
         String selectedQuiz = (String) quizSelectBox.getSelectedItem();
         String selectedStudent = (String) studentSelectBox.getSelectedItem();
@@ -1070,33 +1252,25 @@ class QuizResponseViewer extends JFrame {
 
         try {
             ResultSet rs = databaseManager.executeQuery(
-                    "SELECT r.answers FROM responses r WHERE r.quiz_id = ? AND r.user_id = ?",
+                    "SELECT q.question_text, sa.student_answer, sa.score FROM student_answers sa JOIN questions q ON sa.question_id = q.question_id WHERE sa.quiz_id = ? AND sa.user_id = ?",
                     quizId, userId);
-            if (rs.next()) {
-                String[] answers = rs.getString("answers").split("~");
 
-                ResultSet qs = databaseManager.executeQuery(
-                        "SELECT question_text FROM questions WHERE quiz_id = ?", quizId);
+            DefaultTableModel model = new DefaultTableModel();
+            model.addColumn("Question");
+            model.addColumn("Answer");
+            model.addColumn("Score");
 
-                DefaultTableModel model = new DefaultTableModel();
-                model.addColumn("Question");
-                model.addColumn("Answer");
-
-                int i = 0;
-                while (qs.next() && i < answers.length) {
-                    model.addRow(new Object[] { qs.getString("question_text"), answers[i] });
-                    i++;
-                }
-
-                responseTable.setModel(model);
-                responseTable.setRowHeight(30);
-
-            } else {
-                DefaultTableModel model = new DefaultTableModel();
-                model.addColumn("Message");
-                model.addRow(new Object[] { "No responses found for selected student." });
-                responseTable.setModel(model);
+            while (rs.next()) {
+                model.addRow(new Object[] {
+                        rs.getString("question_text"),
+                        rs.getString("student_answer"),
+                        rs.getObject("score")
+                });
             }
+
+            responseTable.setModel(model);
+            responseTable.setRowHeight(30);
+
         } catch (SQLException e) {
             DatabaseManager.showErrorDialog(this, "Database Error", e.getMessage());
         }
@@ -1106,19 +1280,26 @@ class QuizResponseViewer extends JFrame {
         String selectedQuiz = (String) quizSelectBox.getSelectedItem();
         String selectedStudent = (String) studentSelectBox.getSelectedItem();
         if (selectedQuiz == null || selectedStudent == null) {
-            JOptionPane.showMessageDialog(this, "Please select a quiz and a student.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a quiz and a student.", "Input Error",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         int quizId = Integer.parseInt(selectedQuiz.split(":")[0]);
         int userId = Integer.parseInt(selectedStudent.split(":")[0]);
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this student's response? The student will be able to reattend the quiz.", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to delete this student's response? The student will be able to reattend the quiz.",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) {
             return;
         }
 
         try {
+            // Delete from student_answers
+            databaseManager.executeUpdate("DELETE FROM student_answers WHERE quiz_id = ? AND user_id = ?", quizId,
+                    userId);
+            // Delete from responses
             databaseManager.executeUpdate("DELETE FROM responses WHERE quiz_id = ? AND user_id = ?", quizId, userId);
             JOptionPane.showMessageDialog(this, "Response deleted successfully.");
             loadResponses();
@@ -1190,14 +1371,16 @@ class QuizManager extends JFrame {
     private void deleteSelectedQuiz() {
         int selectedRow = quizTable.getSelectedRow();
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a quiz to delete.", "Input Error", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please select a quiz to delete.", "Input Error",
+                    JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         int quizId = (int) quizTable.getValueAt(selectedRow, 0);
         String quizTitle = (String) quizTable.getValueAt(selectedRow, 1);
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete quiz \"" + quizTitle + "\"?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete quiz \"" + quizTitle + "\"?",
+                "Confirm Delete", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) {
             return;
         }

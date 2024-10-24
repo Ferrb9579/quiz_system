@@ -21,20 +21,31 @@ CREATE TABLE quizzes (
     title VARCHAR(200) NOT NULL
 );
 
--- Create questions table
+-- Create questions table with correct_answer column
 CREATE TABLE questions (
     question_id SERIAL PRIMARY KEY,
     quiz_id INTEGER REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
     question_text TEXT NOT NULL,
     question_type VARCHAR(50) NOT NULL,
-    options TEXT
+    options TEXT,
+    correct_answer TEXT
 );
 
--- Create responses table
+-- Create student_answers table to store individual answers and scores
+CREATE TABLE student_answers (
+    answer_id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
+    quiz_id INTEGER REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
+    question_id INTEGER REFERENCES questions(question_id) ON DELETE CASCADE,
+    student_answer TEXT,
+    score NUMERIC(5,2)
+);
+
+-- Modify responses table to include total_score
 CREATE TABLE responses (
     response_id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     quiz_id INTEGER REFERENCES quizzes(quiz_id) ON DELETE CASCADE,
-    answers TEXT,
+    total_score NUMERIC(5,2),
     UNIQUE (user_id, quiz_id)
 );
